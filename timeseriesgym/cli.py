@@ -12,6 +12,7 @@ from timeseriesgym.grade import (
     grade_code,
     grade_hyperparameter_search,
     grade_jsonl,
+    grade_lite,
     grade_sample,
 )
 from timeseriesgym.judge import llm_judge
@@ -210,6 +211,30 @@ def main():
         default=registry.get_data_dir(),
     )
 
+    # Grade lite sub-parser
+    parser_grade_lite = subparsers.add_parser(
+        name="grade-lite",
+        help="Grade a submission for all TimeSeriesGym Lite competitions.",
+    )
+    parser_grade_lite.add_argument(
+        "submission",
+        help="Path to the JSONL file of submissions. Refer to README.md#submission-format for the "
+        "required format.",
+        type=str,
+    )
+    parser_grade_lite.add_argument(
+        "--output-dir",
+        help="Path to the directory where the evaluation metrics will be saved.",
+        type=str,
+        required=True,
+    )
+    parser_grade_lite.add_argument(
+        "--data-dir",
+        help="Path to the directory where the data used for grading is stored.",
+        required=False,
+        default=registry.get_data_dir(),
+    )
+
     # Dev tools sub-parser
     parser_dev = subparsers.add_parser("dev", help="Developer tools for extending TimeSeriesGym.")
     dev_subparsers = parser_dev.add_subparsers(dest="dev_command", help="Developer command to run.")
@@ -374,6 +399,12 @@ def main():
         report = grade_code(submission, competition)
         logger.info("Competition report:")
         logger.info(json.dumps(report.to_dict(), indent=4))
+
+    if args.command == "grade-lite":
+        new_registry = registry.set_data_dir(Path(args.data_dir))
+        submission = Path(args.submission)
+        output_dir = Path(args.output_dir)
+        grade_lite(submission, output_dir, new_registry)
     if args.command == "dev":
         if args.dev_command == "download-leaderboard":
             if args.all:

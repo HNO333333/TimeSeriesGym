@@ -298,7 +298,7 @@ def aggregate_reports(competition_reports: list[CompetitionReport]) -> dict:
     total_valid_submissions = sum(report.valid_submission for report in competition_reports)
 
     summary_report = {
-        "total_runs": int(len(competition_reports)),
+        "total_runs": len(competition_reports),
         "total_runs_with_submissions": int(total_submissions),
         "total_valid_submissions": int(total_valid_submissions),
         "total_medals": int(total_gold_medals + total_silver_medals + total_bronze_medals),
@@ -310,3 +310,56 @@ def aggregate_reports(competition_reports: list[CompetitionReport]) -> dict:
     }
 
     return summary_report
+
+
+def grade_lite(
+    path_to_submissions: Path,
+    output_dir: Path,
+    registry: Registry = default_registry,
+):
+    """
+    Grades multiple submissions stored in a JSONL file for TimeSeriesGym Lite competitions only.
+    Saves the aggregated report as a JSON file.
+    """
+    # Filter submissions to only include those for lite competitions
+    all_submissions = read_jsonl(path_to_submissions, skip_commented_out_lines=True)
+    lite_submissions = [
+        s for s in all_submissions if s["competition_id"] in registry.get_lite_competition_ids()
+    ]
+
+    if not lite_submissions:
+        logger.warning("No submissions found for TimeSeriesGym Lite competitions.")
+        return
+
+    competitions_reports = []
+    for submission in tqdm(lite_submissions, desc="Grading lite submissions", unit="submission"):
+        submission_path = Path(str(submission["submission_path"]))
+        competition_id = submission["competition_id"]
+        competition = registry.get_competition(competition_id)
+
+        # Determine which grading function to use based on competition configuration
+        if competition.hyperparameter_search_config is not None:
+            # For hyperparameter search competitions
+            single_report = grade_hyperparameter_search(submission_path, competition)
+        elif competition.coding_config is not None:
+            # For coding competitions
+            single_report = grade_code(submission_path, competition)
+        else:
+            # For regular sample competitions
+            single_report = grade_sample(submission_path, competition)
+
+        competitions_reports.append(single_report)
+
+    aggregated_report = aggregate_reports(competitions_reports)
+    timestamp = get_timestamp()
+    save_path = output_dir / f"{timestamp}_lite_grading_report.json"
+    logger.info(
+        json.dumps(
+            {k: v for k, v in aggregated_report.items() if k != "competition_reports"}, indent=4
+        )
+    )
+
+    output_dir.mkdir(exist_ok=True)
+    with open(save_path, "w") as f:
+        json.dump(aggregated_report, f, indent=2)
+    logger.info(purple(f"Saved summary report to {save_path}"))
