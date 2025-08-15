@@ -4,4 +4,4 @@ cache*
 *.pyc
 *.egg-info
 *.lock
-./*.ipynb
+*.ipynb
