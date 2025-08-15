@@ -3,6 +3,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
+import traceback
 
 from tqdm import tqdm
 
@@ -337,18 +338,21 @@ def grade_lite(
         competition_id = submission["competition_id"]
         competition = registry.get_competition(competition_id)
 
-        # Determine which grading function to use based on competition configuration
-        if competition.hyperparameter_search_config is not None:
-            # For hyperparameter search competitions
-            single_report = grade_hyperparameter_search(submission_path, competition)
-        elif competition.coding_config is not None:
-            # For coding competitions
-            single_report = grade_code(submission_path, competition)
-        else:
-            # For regular sample competitions
-            single_report = grade_sample(submission_path, competition)
+        try:
+            # Determine which grading function to use based on competition configuration
+            if competition.hyperparameter_search_config is not None:
+                # For hyperparameter search competitions
+                single_report = grade_hyperparameter_search(submission_path, competition)
+            elif competition.coding_config is not None:
+                # For coding competitions
+                single_report = grade_code(submission_path, competition)
+            else:
+                # For regular sample competitions
+                single_report = grade_sample(submission_path, competition)
 
-        competitions_reports.append(single_report)
+            competitions_reports.append(single_report)
+        except Exception:
+            logger.error(f"Error while processing {competition_id}, {traceback.format_exc()}")
 
     aggregated_report = aggregate_reports(competitions_reports)
     timestamp = get_timestamp()
