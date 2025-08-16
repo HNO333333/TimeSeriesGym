@@ -291,10 +291,24 @@ def aggregate_reports(competition_reports: list[CompetitionReport]) -> dict:
     performance per competition, otherwise sum metrics
     """
 
-    total_gold_medals = sum(report.gold_medal for report in competition_reports)
-    total_silver_medals = sum(report.silver_medal for report in competition_reports)
-    total_bronze_medals = sum(report.bronze_medal for report in competition_reports)
-    total_above_median = sum(report.above_median for report in competition_reports)
+    total_gold_medals = sum(
+        report.gold_medal for report in competition_reports if isinstance(report, CompetitionReport)
+    )
+    total_silver_medals = sum(
+        report.silver_medal
+        for report in competition_reports
+        if isinstance(report, CompetitionReport)
+    )
+    total_bronze_medals = sum(
+        report.bronze_medal
+        for report in competition_reports
+        if isinstance(report, CompetitionReport)
+    )
+    total_above_median = sum(
+        report.above_median
+        for report in competition_reports
+        if isinstance(report, CompetitionReport)
+    )
     total_submissions = sum(report.submission_exists for report in competition_reports)
     total_valid_submissions = sum(report.valid_submission for report in competition_reports)
 
